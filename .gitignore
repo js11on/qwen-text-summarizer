@@ -1,0 +1,16 @@
+# 虚拟环境
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 环境变量密钥文件（重点！不要把API密钥上传github！）
+.env
+
+# pycharm配置
+.idea/
+*.iml
+
+# 日志、临时文件
+*.log
