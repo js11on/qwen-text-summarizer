@@ -3,18 +3,13 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
-# 加载.env环境变量
 load_dotenv()
-
-api_key = os.getenv("OPENAI_API_KEY")
-base_url = os.getenv("OPENAI_BASE_URL")
-model_name = os.getenv("MODEL_NAME")
 
 def init_llm():
     llm = ChatOpenAI(
-        api_key=api_key,
-        base_url=base_url,
-        model=model_name,
+        api_key=os.getenv("DASHSCOPE_API_KEY"),
+        base_url=os.getenv("BASE_URL"),
+        model=os.getenv("MODEL_NAME"),
         temperature=0.3
     )
     return llm
