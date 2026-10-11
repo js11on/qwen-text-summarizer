@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>通义文本摘要工具</title>
+<style>
+  :root{
+    --bg:#f4f6fb;
+    --card:#ffffff;
+    --line:#e4e8f2;
+    --text:#1c2033;
+    --muted:#6b7392;
+    --primary:#5b5bd6;
+    --primary-dark:#4a4ac0;
+    --primary-soft:#eef0ff;
+    --ok:#0f9d63;
+    --err:#d64545;
+    --shadow:0 1px 2px rgba(28,32,51,.04), 0 8px 24px rgba(28,32,51,.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:14px;
+    line-height:1.6;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 56px;}
+
+  header.top{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;}
+  .logo{
+    width:44px;height:44px;border-radius:12px;flex:none;
+    background:linear-gradient(135deg,#6d6df0,#4a4ac0);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:700;font-size:18px;letter-spacing:.5px;
+    box-shadow:0 6px 16px rgba(91,91,214,.32);
+  }
+  .title h1{margin:0;font-size:20px;font-weight:650;letter-spacing:.2px;}
+  .title p{margin:2px 0 0;color:var(--muted);font-size:12.5px;}
+  .model-tag{
+    margin-left:auto;background:var(--primary-soft);color:var(--primary-dark);
+    border:1px solid #dcdcfb;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;
+    white-space:nowrap;
+  }
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    box-shadow:var(--shadow);overflow:hidden;
+  }
+  .card-head{
+    display:flex;align-items:center;gap:10px;
+    padding:13px 16px;border-bottom:1px solid var(--line);
+    font-weight:620;font-size:13.5px;
+  }
+  .card-head .dot{width:8px;height:8px;border-radius:50%;background:var(--primary);flex:none;}
+  .card-head .right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+  .card-body{padding:16px;}
+
+  textarea{
+    width:100%;min-height:280px;resize:vertical;
+    border:1px solid var(--line);border-radius:10px;padding:12px 13px;
+    font-family:inherit;font-size:13.5px;line-height:1.7;color:var(--text);
+    background:#fcfdff;outline:none;transition:border-color .15s,box-shadow .15s;
+  }
+  textarea:focus{border-color:#b9b9f5;box-shadow:0 0 0 3px rgba(91,91,214,.1);background:#fff;}
+  textarea::placeholder{color:#9aa1bb;}
+
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .between{justify-content:space-between;}
+
+  .btn{
+    border:1px solid var(--line);background:#fff;color:var(--text);
+    border-radius:9px;padding:8px 14px;font-size:13px;font-weight:560;cursor:pointer;
+    font-family:inherit;transition:.15s;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn:hover{border-color:#c9cdea;background:#fafbff;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn.primary{
+    background:var(--primary);border-color:var(--primary);color:#fff;
+    box-shadow:0 4px 12px rgba(91,91,214,.28);
+  }
+  .btn.primary:hover:not(:disabled){background:var(--primary-dark);border-color:var(--primary-dark);}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--muted);padding:6px 8px;}
+  .btn.ghost:hover{background:#f1f3fa;color:var(--text);border-color:transparent;}
+
+  .seg{display:inline-flex;background:#f1f3fa;border-radius:9px;padding:3px;gap:2px;}
+  .seg label{
+    padding:6px 14px;border-radius:7px;font-size:13px;font-weight:560;color:var(--muted);
+    cursor:pointer;transition:.15s;user-select:none;
+  }
+  .seg input{display:none;}
+  .seg input:checked + span{color:#fff;}
+  .seg label:has(input:checked){background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(91,91,214,.28);}
+
+  .meta{color:var(--muted);font-size:12px;}
+
+  .output{
+    min-height:280px;max-height:520px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+    font-size:13.5px;line-height:1.85;padding:14px;border-radius:10px;
+    background:#fcfdff;border:1px solid var(--line);
+  }
+  .output.empty{color:#9aa1bb;}
+  .placeholder{color:#9aa1bb;}
+
+  .steps{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+  .step{font-size:12.5px;color:var(--muted);display:flex;gap:8px;align-items:center;}
+  .spinner{
+    width:12px;height:12px;border:2px solid #d7daf0;border-top-color:var(--primary);
+    border-radius:50%;animation:spin .8s linear infinite;flex:none;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .step.done .spinner{display:none;}
+  .step.done::before{content:"✓";color:var(--ok);font-weight:700;font-size:12px;}
+  .banner{
+    border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px;display:none;
+  }
+  .banner.err{display:block;background:#fdf1f1;border:1px solid #f5d5d5;color:#a83232;}
+  .cursor{display:inline-block;width:7px;height:15px;background:var(--primary);
+    vertical-align:-2px;margin-left:2px;animation:blink 1s steps(2) infinite;border-radius:1px;}
+  @keyframes blink{50%{opacity:0;}}
+  .footer{margin-top:26px;text-align:center;color:var(--muted);font-size:12px;}
+  .tip{font-size:12px;color:var(--muted);margin-top:8px;}
+  a{color:var(--primary-dark);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">摘</div>
+    <div class="title">
+      <h1>通义文本摘要工具</h1>
+      <p>手动输入或上传 txt · 简短 / 详细摘要 · 长文本自动分段并汇总</p>
+    </div>
+    <div class="model-tag" id="modelTag">模型加载中…</div>
+  </header>
+
+  <div class="grid">
+    <!-- 左侧：输入 -->
+    <section class="card">
+      <div class="card-head">
+        <span class="dot"></span>原文输入
+        <div class="right">
+          <button class="btn ghost" id="clearBtn" type="button">清空</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <textarea id="input" placeholder="在这里粘贴或输入需要摘要的文本…&#10;&#10;也可以点击下方「上传 txt 文件」，直接从本地读取文本。"></textarea>
+        <div class="row between" style="margin-top:12px;">
+          <div class="row">
+            <button class="btn" id="fileBtn" type="button">上传 txt 文件</button>
+            <input type="file" id="fileInput" accept=".txt,.md,.text" hidden />
+            <span class="meta" id="count">0 字</span>
+          </div>
+          <span class="meta" id="modeHint"></span>
+        </div>
+        <div class="tip">超过 1500 字将自动分段摘要后再汇总，长文也能稳定输出。</div>
+      </div>
+    </section>
+
+    <!-- 右侧：结果 -->
+    <section class="card">
+      <div class="card-head">
+        <span class="dot"></span>摘要结果
+        <div class="right">
+          <button class="btn ghost" id="copyBtn" type="button" disabled>复制</button>
+          <button class="btn ghost" id="dlBtn" type="button" disabled>下载</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row between" style="margin-bottom:12px;">
+          <div class="seg">
+            <label><input type="radio" name="style" value="short" checked /><span>简短摘要</span></label>
+            <label><input type="radio" name="style" value="detail" /><span>详细摘要</span></label>
+          </div>
+          <div class="row">
+            <button class="btn" id="stopBtn" type="button" disabled>停止</button>
+            <button class="btn primary" id="goBtn" type="button">开始摘要</button>
+          </div>
+        </div>
+
+        <div class="banner err" id="errBox"></div>
+        <div class="steps" id="steps"></div>
+        <div class="output empty" id="output">摘要结果将在这里实时显示…</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer">
+    基于通义千问大模型 · 长文本分段摘要逻辑与原命令行版一致
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var input = $('input'), output = $('output'), countEl = $('count'), modeHint = $('modeHint');
+  var goBtn = $('goBtn'), stopBtn = $('stopBtn'), clearBtn = $('clearBtn');
+  var fileBtn = $('fileBtn'), fileInput = $('fileInput');
+  var copyBtn = $('copyBtn'), dlBtn = $('dlBtn');
+  var stepsEl = $('steps'), errBox = $('errBox'), modelTag = $('modelTag');
+  var controller = null, lastSummary = '', running = false;
+
+  // ---- 健康检查：显示当前模型 ----
+  fetch('/health').then(function (r) { return r.json(); }).then(function (d) {
+    modelTag.textContent = d.model ? ('模型：' + d.model) : '模型未配置';
+  }).catch(function () { modelTag.textContent = '模型状态未知'; });
+
+  function setCount() {
+    var n = input.value.length;
+    countEl.textContent = n.toLocaleString() + ' 字';
+    modeHint.textContent = n > 1500 ? '将启用长文本分段摘要' : '';
+  }
+  input.addEventListener('input', setCount);
+  setCount();
+
+  input.addEventListener('paste', function () { setTimeout(setCount, 0); });
+
+  clearBtn.addEventListener('click', function () {
+    if (running) return;
+    input.value = ''; setCount(); resetOutput();
+  });
+
+  fileBtn.addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () {
+    var f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) {
+      showError('文件过大（超过 2MB），建议拆分后再上传。');
+      fileInput.value = '';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      input.value = String(reader.result || '');
+      setCount();
+      showError('');
+    };
+    reader.onerror = function () { showError('读取文件失败，请确认是纯文本 txt 文件。'); };
+    reader.readAsText(f, 'utf-8');
+    fileInput.value = '';
+  });
+
+  function showError(msg) {
+    errBox.textContent = msg || '';
+    errBox.className = msg ? 'banner err' : 'banner';
+    errBox.style.display = msg ? 'block' : 'none';
+  }
+  function resetOutput() {
+    output.textContent = '摘要结果将在这里实时显示…';
+    output.className = 'output empty';
+    stepsEl.innerHTML = '';
+    lastSummary = '';
+    copyBtn.disabled = true; dlBtn.disabled = true;
+    showError('');
+  }
+  function addStep(text) {
+    var d = document.createElement('div');
+    d.className = 'step';
+    d.innerHTML = '<span class="spinner"></span><span>' + text + '</span>';
+    stepsEl.appendChild(d);
+    stepsEl.scrollTop = stepsEl.scrollHeight;
+    return d;
+  }
+  function finishSteps() {
+    Array.prototype.forEach.call(stepsEl.children, function (c) {
+      c.classList.add('done');
+      var sp = c.querySelector('.spinner'); if (sp) sp.remove();
+    });
+  }
+  function setRunning(v) {
+    running = v;
+    goBtn.disabled = v;
+    stopBtn.disabled = !v;
+    goBtn.textContent = v ? '生成中…' : '开始摘要';
+  }
+  function renderStream(text, done) {
+    output.className = 'output';
+    output.textContent = text + (done ? '' : '\n');
+    if (!done) {
+      var c = document.createElement('span');
+      c.className = 'cursor';
+      output.appendChild(c);
+    }
+    output.scrollTop = output.scrollHeight;
+  }
+
+  goBtn.addEventListener('click', function () {
+    var text = input.value.trim();
+    if (!text) { showError('请先输入或上传需要摘要的文本。'); input.focus(); return; }
+    var style = document.querySelector('input[name="style"]:checked').value;
+
+    resetOutput();
+    setRunning(true);
+    lastSummary = '';
+    var acc = '';
+
+    controller = new AbortController();
+
+    fetch('/api/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, style: style }),
+      signal: controller.signal
+    }).then(function (resp) {
+      if (!resp.ok) {
+        return resp.json().catch(function () { return {}; }).then(function (j) {
+          throw new Error(j.error || ('请求失败（HTTP ' + resp.status + '）'));
+        });
+      }
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder('utf-8');
+      var buf = '';
+
+      function handle(obj) {
+        if (obj.type === 'progress') {
+          addStep(obj.message);
+        } else if (obj.type === 'delta') {
+          acc += obj.content;
+          renderStream(acc, false);
+        } else if (obj.type === 'done') {
+          finishSteps();
+          renderStream(obj.summary || acc, true);
+          lastSummary = obj.summary || acc;
+          copyBtn.disabled = !lastSummary;
+          dlBtn.disabled = !lastSummary;
+        } else if (obj.type === 'error') {
+          finishSteps();
+          showError(obj.message || '生成失败');
+        }
+      }
+
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) return;
+          buf += decoder.decode(r.value, { stream: true });
+          var parts = buf.split('\n\n');
+          buf = parts.pop();
+          for (var i = 0; i < parts.length; i++) {
+            var p = parts[i].trim();
+            if (!p || p.indexOf('data:') !== 0) continue;
+            try { handle(JSON.parse(p.slice(5).trim())); } catch (e) { /* 忽略半包 */ }
+          }
+          return pump();
+        });
+      }
+      return pump();
+    }).catch(function (e) {
+      if (e && e.name === 'AbortError') {
+        finishSteps();
+        if (acc) { renderStream(acc, true); lastSummary = acc; copyBtn.disabled = false; dlBtn.disabled = false; }
+        addStep('已停止生成');
+      } else {
+        finishSteps();
+        showError(e && e.message ? e.message : '网络异常，请稍后重试。');
+      }
+    }).then(function () {
+      setRunning(false);
+      controller = null;
+    });
+  });
+
+  stopBtn.addEventListener('click', function () {
+    if (controller) controller.abort();
+  });
+
+  copyBtn.addEventListener('click', function () {
+    if (!lastSummary) return;
+    navigator.clipboard.writeText(lastSummary).then(function () {
+      var t = copyBtn.textContent;
+      copyBtn.textContent = '已复制';
+      setTimeout(function () { copyBtn.textContent = t; }, 1200);
+    }).catch(function () { showError('复制失败，请手动选中文本复制。'); });
+  });
+
+  dlBtn.addEventListener('click', function () {
+    if (!lastSummary) return;
+    var blob = new Blob([lastSummary], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'summary.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+  });
+
+  // Ctrl/Cmd + Enter 快捷提交
+  input.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); goBtn.click(); }
+  });
+})();
+</script>
+</body>
+</html>

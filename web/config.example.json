@@ -1,0 +1,5 @@
+{
+  "DASHSCOPE_API_KEY": "sk-你的百炼APIKey",
+  "BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "MODEL_NAME": "qwen3.8-max"
+}

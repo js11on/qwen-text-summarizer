@@ -8,9 +8,16 @@ __pycache__/
 # 环境变量密钥文件（重点！不要把API密钥上传github！）
 .env
 
+# Web 版模型配置（内含 API Key，仅服务端使用，绝对不能提交！）
+config.json
+web/config.json
+
 # pycharm配置
 .idea/
 *.iml
 
 # 日志、临时文件
 *.log
+
+# 程序运行生成的结果文件
+result.txt
